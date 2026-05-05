@@ -507,7 +507,7 @@ const KelolaMatkulDosen = () => {
                     </div>
                     
                     <div>
-                      <label className="block text-[11px] font-mono font-semibold text-lp-text3 mb-3 tracking-widest uppercase">File Materi *</label>
+                      <label className="block text-[11px] font-mono font-semibold text-lp-text3 mb-3 tracking-widest uppercase">File Materi (Opsional)</label>
                       <div className="relative group">
                         <input
                           type="file"
@@ -515,7 +515,6 @@ const KelolaMatkulDosen = () => {
                           className="hidden"
                           id="file-upload-materi"
                           accept=".pdf,.ppt,.pptx,.doc,.docx,.zip,.jpg,.jpeg,.png"
-                          required={!formData.file}
                         />
                         <label 
                           htmlFor="file-upload-materi"

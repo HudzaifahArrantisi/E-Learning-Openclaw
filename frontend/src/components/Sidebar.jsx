@@ -168,17 +168,17 @@ const Sidebar = ({ role, isOpen, onClose }) => {
               onClick={() => window.innerWidth < 1024 && closeSidebar()}
               className={`
                 flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 group
-                ${isActive(item.path) 
+                ${(isActive(item.path) || location.pathname.startsWith(item.path)) 
                   ? 'bg-lp-accentS text-lp-atext font-semibold' 
                   : 'text-lp-text2 hover:bg-lp-surface hover:text-lp-text'
                 }
               `}
             >
-              <div className={`text-base ${isActive(item.path) ? 'text-lp-atext' : 'text-lp-text3 group-hover:text-lp-text2'}`}>
+              <div className={`text-base ${(isActive(item.path) || location.pathname.startsWith(item.path)) ? 'text-lp-atext' : 'text-lp-text3 group-hover:text-lp-text2'}`}>
                 {item.icon}
               </div>
               <span className="text-[13px] font-light">{item.label}</span>
-              {isActive(item.path) && (
+              {(isActive(item.path) || location.pathname.startsWith(item.path)) && (
                 <div className="ml-auto w-1.5 h-1.5 rounded-full bg-lp-accent animate-pulse" />
               )}
             </Link>

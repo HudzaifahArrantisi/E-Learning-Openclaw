@@ -1588,19 +1588,23 @@ func UploadMateri(c *gin.Context) {
 		return
 	}
 
-	// File wajib untuk materi — upload ke database (BYTEA)
-	if _, _, fErr := c.Request.FormFile("file"); fErr != nil {
-		utils.ValidationError(c, "File materi wajib diupload")
+	// File materi opsional
+	var uploadID int64
+	var filePath interface{}
+	if _, _, fErr := c.Request.FormFile("file"); fErr == nil {
+		// Upload file ke database via UploadFileToDB jika ada file
+		uID, uploadedFilePath, uploadErr := UploadFileToDB(c, "file", dosenID, "dosen", "materi", nil, nil)
+		if uploadErr != nil {
+			utils.ErrorResponse(c, http.StatusBadRequest, uploadErr.Error())
+			return
+		}
+		uploadID = uID
+		filePath = uploadedFilePath
+		log.Printf("[Materi] File uploaded to DB: id=%d, url=%s", uploadID, uploadedFilePath)
+	} else if fErr != http.ErrMissingFile {
+		utils.ErrorResponse(c, http.StatusBadRequest, "Gagal membaca file materi")
 		return
 	}
-
-	// Upload file ke database via UploadFileToDB
-	uploadID, filePath, uploadErr := UploadFileToDB(c, "file", dosenID, "dosen", "materi", nil, nil)
-	if uploadErr != nil {
-		utils.ErrorResponse(c, http.StatusBadRequest, uploadErr.Error())
-		return
-	}
-	log.Printf("[Materi] File uploaded to DB: id=%d, url=%s", uploadID, filePath)
 
 	// INSERT ke tabel tugas dengan type 'materi'
 	query := `
@@ -1617,7 +1621,9 @@ func UploadMateri(c *gin.Context) {
 	}
 
 	// Update related_id di uploads table untuk referensi ke tugas
-	config.DB.Exec("UPDATE uploads SET related_id = $1, related_table = 'tugas' WHERE id = $2", id, uploadID)
+	if uploadID > 0 {
+		config.DB.Exec("UPDATE uploads SET related_id = $1, related_table = 'tugas' WHERE id = $2", id, uploadID)
+	}
 
 	utils.SuccessResponse(c, gin.H{
 		"id":        id,

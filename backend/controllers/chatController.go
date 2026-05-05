@@ -71,13 +71,15 @@ func (cc *ChatController) GetConversations(c *gin.Context) {
 	var conversations []models.Conversation
 
 	// Query conversations where user is participant
-	query := cc.db.Model(&models.Conversation{}).
-		Select("conversations.*").
+	if err := cc.db.Model(&models.Conversation{}).
+		Preload("Participants.User.Mahasiswa").
+		Preload("Participants.User.Dosen").
+		Preload("Participants.User.Ukm").
+		Preload("Participants.User.Ormawa").
 		Joins("JOIN conversation_participants ON conversation_participants.conversation_id = conversations.id").
 		Where("conversation_participants.user_id = ?", userID).
-		Order("conversations.updated_at DESC")
-
-	if err := query.Find(&conversations).Error; err != nil {
+		Order("conversations.updated_at DESC").
+		Find(&conversations).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,
 			"error":   "Failed to get conversations: " + err.Error(),
@@ -85,47 +87,55 @@ func (cc *ChatController) GetConversations(c *gin.Context) {
 		return
 	}
 
-	// Get pinned conversations for user
-	var pinnedConversations []models.PinnedConversation
-	if err := cc.db.Where("user_id = ?", userID).Find(&pinnedConversations).Error; err != nil {
-		// non-fatal: attach to context and continue
-		c.Error(err)
+	// Get last messages for all these conversations in one go
+	var convIDs []int
+	for _, conv := range conversations {
+		convIDs = append(convIDs, conv.ID)
 	}
 
+	lastMessages := make(map[int]models.Message)
+	if len(convIDs) > 0 {
+		var msgs []models.Message
+		cc.db.Where("id IN (SELECT MAX(id) FROM messages WHERE conversation_id IN ? AND deleted_at IS NULL GROUP BY conversation_id)", convIDs).
+			Preload("Sender").
+			Find(&msgs)
+		for _, m := range msgs {
+			lastMessages[m.ConversationID] = m
+		}
+	}
+
+	// Get unread counts for all conversations in one go
+	unreadCounts := make(map[int]int64)
+	if len(convIDs) > 0 {
+		type CountResult struct {
+			ConversationID int
+			Count          int64
+		}
+		var results []CountResult
+		cc.db.Model(&models.Message{}).
+			Select("conversation_id, count(*) as count").
+			Where("conversation_id IN ? AND sender_id != ? AND is_read = false AND deleted_at IS NULL", convIDs, userID).
+			Group("conversation_id").
+			Scan(&results)
+		for _, r := range results {
+			unreadCounts[r.ConversationID] = r.Count
+		}
+	}
+
+	// Get pinned conversations for user
+	var pinnedConversations []models.PinnedConversation
+	cc.db.Where("user_id = ?", userID).Find(&pinnedConversations)
 	pinnedMap := make(map[int]bool)
 	for _, pc := range pinnedConversations {
 		pinnedMap[pc.ConversationID] = true
 	}
 
 	// Build response
-	var response []models.ConversationResponse
+	response := make([]models.ConversationResponse, 0, len(conversations))
 	for _, conv := range conversations {
-		// Get last message
-		var lastMessage models.Message
-		cc.db.Where("conversation_id = ? AND deleted_at IS NULL", conv.ID).
-			Order("created_at DESC").
-			Preload("Sender").
-			First(&lastMessage)
-
-		// Get unread count
-		var unreadCount int64
-		cc.db.Model(&models.Message{}).
-			Where("conversation_id = ? AND sender_id != ? AND is_read = false AND deleted_at IS NULL", conv.ID, userID).
-			Count(&unreadCount)
-
-		// Get participants
-		var participants []models.ConversationParticipant
-		cc.db.Where("conversation_id = ?", conv.ID).
-			Preload("User").
-			Preload("User.Mahasiswa").
-			Preload("User.Dosen").
-			Preload("User.Ukm").
-			Preload("User.Ormawa").
-			Find(&participants)
-
 		// Map participants
-		participantResponses := make([]models.ParticipantResponse, 0)
-		for _, p := range participants {
+		participantResponses := make([]models.ParticipantResponse, 0, len(conv.Participants))
+		for _, p := range conv.Participants {
 			participantResponses = append(participantResponses, models.ParticipantResponse{
 				UserID:     p.UserID,
 				User:       models.MapUserToResponse(p.User),
@@ -135,35 +145,19 @@ func (cc *ChatController) GetConversations(c *gin.Context) {
 			})
 		}
 
-		// Map mata kuliah if exists
-		var mataKuliah *models.MataKuliahResponse
-		if conv.MataKuliahID != nil {
-			var mk models.MataKuliah
-			if err := cc.db.Preload("Dosen.User").First(&mk, *conv.MataKuliahID).Error; err == nil {
-				dosen := models.MapUserToResponse(mk.Dosen.User)
-				mataKuliah = &models.MataKuliahResponse{
-					ID:    mk.ID,
-					Kode:  mk.Kode,
-					Nama:  mk.Nama,
-					SKS:   mk.SKS,
-					Dosen: dosen,
-				}
-			}
-		}
-
 		// Map last message
 		var lastMsgResp *models.MessageResponse
-		if lastMessage.ID != 0 {
+		if msg, ok := lastMessages[conv.ID]; ok {
 			lastMsgResp = &models.MessageResponse{
-				ID:          lastMessage.ID,
-				Sender:      models.MapUserToResponse(lastMessage.Sender),
-				Content:     lastMessage.Content,
-				MessageType: lastMessage.MessageType,
-				FileURL:     lastMessage.FileURL,
-				FileName:    lastMessage.FileName,
-				FileSize:    lastMessage.FileSize,
-				IsRead:      lastMessage.IsRead,
-				CreatedAt:   lastMessage.CreatedAt,
+				ID:          msg.ID,
+				Sender:      models.MapUserToResponse(msg.Sender),
+				Content:     msg.Content,
+				MessageType: msg.MessageType,
+				FileURL:     msg.FileURL,
+				FileName:    msg.FileName,
+				FileSize:    msg.FileSize,
+				IsRead:      msg.IsRead,
+				CreatedAt:   msg.CreatedAt,
 			}
 		}
 
@@ -171,15 +165,15 @@ func (cc *ChatController) GetConversations(c *gin.Context) {
 			ID:           conv.ID,
 			Type:         conv.Type,
 			Name:         conv.Name,
-			MataKuliah:   mataKuliah,
 			LastMessage:  lastMsgResp,
-			UnreadCount:  int(unreadCount),
+			UnreadCount:  int(unreadCounts[conv.ID]),
 			Participants: participantResponses,
 			IsPinned:     pinnedMap[conv.ID],
 			CreatedAt:    conv.CreatedAt,
 			UpdatedAt:    conv.UpdatedAt,
 		})
 	}
+
 
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,

@@ -564,16 +564,20 @@ func AdminUploadMateri(c *gin.Context) {
 		return
 	}
 
-	// File wajib untuk materi
-	if _, _, fErr := c.Request.FormFile("file"); fErr != nil {
-		utils.ValidationError(c, "File materi wajib diupload")
-		return
-	}
-
+	// File materi opsional
 	uid, _ := userID.(int)
-	uploadID, filePath, uploadErr := UploadFileToDB(c, "file", uid, "admin", "materi", nil, nil)
-	if uploadErr != nil {
-		utils.ErrorResponse(c, http.StatusBadRequest, uploadErr.Error())
+	var uploadID int64
+	var filePath interface{}
+	if _, _, fErr := c.Request.FormFile("file"); fErr == nil {
+		uID, uploadedFilePath, uploadErr := UploadFileToDB(c, "file", uid, "admin", "materi", nil, nil)
+		if uploadErr != nil {
+			utils.ErrorResponse(c, http.StatusBadRequest, uploadErr.Error())
+			return
+		}
+		uploadID = uID
+		filePath = uploadedFilePath
+	} else if fErr != http.ErrMissingFile {
+		utils.ErrorResponse(c, http.StatusBadRequest, "Gagal membaca file materi")
 		return
 	}
 
@@ -590,7 +594,9 @@ func AdminUploadMateri(c *gin.Context) {
 		return
 	}
 
-	config.DB.Exec("UPDATE uploads SET related_id = $1, related_table = 'tugas' WHERE id = $2", id, uploadID)
+	if uploadID > 0 {
+		config.DB.Exec("UPDATE uploads SET related_id = $1, related_table = 'tugas' WHERE id = $2", id, uploadID)
+	}
 
 	utils.SuccessResponse(c, gin.H{
 		"id":        id,
