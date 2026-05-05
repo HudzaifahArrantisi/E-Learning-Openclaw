@@ -446,12 +446,12 @@ const KelolaMatkulDosen = () => {
           <AnimatePresence>
             {/* Modal Upload Materi */}
             {showUploadMateri && (
-              <div className="fixed inset-0 bg-lp-text/20 backdrop-blur-md flex items-center justify-center p-4 z-[90] overflow-y-auto">
+              <div className="fixed inset-0 bg-lp-text/20 backdrop-blur-md flex items-center justify-center p-4 lg:pl-[260px] z-[1000] overflow-y-auto transition-all duration-500">
                 <motion.div 
                   initial={{ opacity: 0, scale: 0.9, y: 20 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                  className="bg-white border border-lp-border rounded-[2.5rem] p-8 md:p-12 w-full max-w-2xl my-auto shadow-[0_32px_64px_rgba(0,0,0,0.12)] relative"
+                  className="bg-white border border-lp-border rounded-[2.5rem] p-6 md:p-10 w-full max-w-2xl my-auto shadow-[0_32px_64px_rgba(0,0,0,0.12)] relative max-h-[90dvh] overflow-y-auto custom-scrollbar"
                 >
                   <div className="absolute top-8 right-8">
                      <button onClick={() => setShowUploadMateri(false)} className="w-10 h-10 rounded-full bg-lp-surface border border-lp-border flex items-center justify-center text-lp-text hover:bg-lp-text hover:text-white transition-all duration-300">✕</button>
@@ -575,12 +575,12 @@ const KelolaMatkulDosen = () => {
 
             {/* Modal Buat Tugas */}
             {showCreateTugas && (
-              <div className="fixed inset-0 bg-lp-text/20 backdrop-blur-md flex items-center justify-center p-4 z-[90] overflow-y-auto">
+              <div className="fixed inset-0 bg-lp-text/20 backdrop-blur-md flex items-center justify-center p-4 lg:pl-[260px] z-[1000] overflow-y-auto transition-all duration-500">
                 <motion.div 
                   initial={{ opacity: 0, scale: 0.9, y: 20 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                  className="bg-white border border-lp-border rounded-[2.5rem] p-8 md:p-12 w-full max-w-2xl my-auto shadow-[0_32px_64px_rgba(0,0,0,0.12)] relative"
+                  className="bg-white border border-lp-border rounded-[2.5rem] p-6 md:p-10 w-full max-w-2xl my-auto shadow-[0_32px_64px_rgba(0,0,0,0.12)] relative max-h-[90dvh] overflow-y-auto custom-scrollbar"
                 >
                   <div className="absolute top-8 right-8">
                      <button onClick={() => setShowCreateTugas(false)} className="w-10 h-10 rounded-full bg-lp-surface border border-lp-border flex items-center justify-center text-lp-text hover:bg-lp-text hover:text-white transition-all duration-300">✕</button>
@@ -711,12 +711,12 @@ const KelolaMatkulDosen = () => {
 
             {/* Modal Detail Pertemuan */}
             {showDetailPertemuan && (
-              <div className="fixed inset-0 bg-lp-text/30 backdrop-blur-md flex items-center justify-center p-4 z-[90] overflow-y-auto">
+              <div className="fixed inset-0 bg-lp-text/30 backdrop-blur-md flex items-center justify-center p-4 lg:pl-[260px] z-[1000] overflow-y-auto transition-all duration-500">
                 <motion.div 
                   initial={{ opacity: 0, y: 50 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 50 }}
-                  className="bg-lp-bg border border-lp-border rounded-[3rem] p-8 md:p-14 w-full max-w-5xl my-auto shadow-[0_64px_128px_rgba(0,0,0,0.15)] relative overflow-hidden"
+                  className="bg-lp-bg border border-lp-border rounded-[3rem] p-6 md:p-10 w-full max-w-5xl my-auto shadow-[0_64px_128px_rgba(0,0,0,0.15)] relative overflow-hidden max-h-[95dvh] overflow-y-auto custom-scrollbar"
                 >
                   <div className="absolute top-0 right-0 w-64 h-64 bg-lp-text/5 blur-[80px] rounded-full translate-x-1/2 -translate-y-1/2" />
                   
