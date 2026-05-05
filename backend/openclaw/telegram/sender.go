@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"html"
 	"io"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -97,6 +99,11 @@ func (s *Sender) doSend(text string) error {
 
 // FormatInstantNotification formats the instant notification message
 func FormatInstantNotification(title, courseName, description, dueDate, category string, pertemuan int) string {
+	title = sanitizeTelegramText(title)
+	courseName = sanitizeTelegramText(courseName)
+	description = sanitizeTelegramText(description)
+	dueDate = sanitizeTelegramText(dueDate)
+
 	categoryLabel := ""
 	if category == "peminatan_cs" {
 		categoryLabel = " [PEMINATAN CS]"
@@ -117,6 +124,10 @@ func FormatInstantNotification(title, courseName, description, dueDate, category
 }
 
 func FormatReminderNotification(title, courseName, dueDate, reminderType, category string, daysLeft int) string {
+	title = sanitizeTelegramText(title)
+	courseName = sanitizeTelegramText(courseName)
+	dueDate = sanitizeTelegramText(dueDate)
+
 	urgency := getUrgencyLabel(reminderType, daysLeft)
 	categoryLabel := getCategoryLabel(category)
 
@@ -141,9 +152,9 @@ func FormatGroupedReminderNotification(reminders []map[string]interface{}) strin
 	
 	var body string
 	for i, r := range reminders {
-		title := r["title"].(string)
-		courseName := r["courseName"].(string)
-		dueDate := r["dueDate"].(string)
+		title := sanitizeTelegramText(r["title"].(string))
+		courseName := sanitizeTelegramText(r["courseName"].(string))
+		dueDate := sanitizeTelegramText(r["dueDate"].(string))
 		reminderType := r["reminderType"].(string)
 		daysLeft := r["daysLeft"].(int)
 		pendingCount := r["pendingCount"].(int)
@@ -187,6 +198,10 @@ func getCategoryLabel(category string) string {
 }
 
 func FormatMateriNotification(title, courseName, description, category string, pertemuan int) string {
+	title = sanitizeTelegramText(title)
+	courseName = sanitizeTelegramText(courseName)
+	description = sanitizeTelegramText(description)
+
 	categoryLabel := ""
 	if category == "peminatan_cs" {
 		categoryLabel = " [PEMINATAN CS]"
@@ -203,4 +218,11 @@ func FormatMateriNotification(title, courseName, description, category string, p
 			"Silakan pelajari materi yang baru diupload! 🤓",
 		categoryLabel, courseName, title, pertemuan, description,
 	)
+}
+
+// sanitizeTelegramText converts markdown-like copied text into safe plain text for HTML parse mode.
+func sanitizeTelegramText(s string) string {
+	s = strings.ReplaceAll(s, "**", "")
+	s = strings.TrimSpace(s)
+	return html.EscapeString(s)
 }
